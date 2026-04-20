@@ -1,0 +1,1112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH & MULTI-TENANT ────────────────────────────────
+
+model Organization {
+  id                     String       @id @default(uuid())
+  name                   String
+  slug                   String       @unique
+  logo                   String?
+  accentColor            String       @default("#22c55e")
+  plan                   Plan         @default(TRIAL)
+  planStatus             PlanStatus   @default(TRIAL)
+  maxUsers               Int          @default(1)
+  stripeCustomerId       String?      @unique
+  stripeSubscriptionId   String?      @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  trialEndsAt            DateTime?
+  vatNumber              String?
+  address                String?
+  city                   String?
+  zip                    String?
+  country                String       @default("IT")
+  phone                  String?
+  email                  String?
+  website                String?
+  invoiceNotes           String?
+  settings               Json?
+  isActive               Boolean      @default(true)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  users              User[]
+  customers          Customer[]
+  suppliers          Supplier[]
+  products           Product[]
+  materials          Material[]
+  warehouses         Warehouse[]
+  quotes             Quote[]
+  orders             Order[]
+  productions        ProductionJob[]
+  dtfOrders          DtfOrder[]
+  stickerOrders      StickerOrder[]
+  samples            Sample[]
+  shipments          Shipment[]
+  employees          Employee[]
+  machines           Machine[]
+  financialEntries   FinancialEntry[]
+  tasks              Task[]
+  aiLogs             AiLog[]
+}
+
+enum Plan {
+  TRIAL
+  SOLO
+  TEAM
+  STUDIO
+  AGENCY
+  ENTERPRISE
+}
+
+enum PlanStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  BLOCKED
+}
+
+model User {
+  id             String   @id @default(uuid())
+  organizationId String
+  email          String
+  passwordHash   String
+  name           String
+  avatar         String?
+  role           Role     @default(OPERATOR)
+  department     String?
+  isActive       Boolean  @default(true)
+  lastLogin      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([email, organizationId])
+  @@index([organizationId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  OPERATOR
+  GRAPHIC
+  VIEWER
+}
+
+// ─── CRM ────────────────────────────────────────────────
+
+model Customer {
+  id             String   @id @default(uuid())
+  organizationId String
+  code           String
+  name           String
+  company        String?
+  email          String?
+  phone          String?
+  whatsapp       String?
+  address        String?
+  city           String?
+  zip            String?
+  province       String?
+  country        String   @default("IT")
+  vatNumber      String?
+  taxCode        String?
+  notes          String?
+  status         String   @default("attivo")
+  source         String?
+  assignedTo     String?
+  paymentTerms   String?
+  discountPct    Decimal  @default(0)
+  tags           String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  quotes       Quote[]
+  orders       Order[]
+  shipments    Shipment[]
+  samples      Sample[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+model Supplier {
+  id              String   @id @default(uuid())
+  organizationId  String
+  code            String
+  name            String
+  contactName     String?
+  email           String?
+  phone           String?
+  address         String?
+  city            String?
+  country         String   @default("IT")
+  vatNumber       String?
+  leadTimeDays    Int      @default(5)
+  reliabilityScore Int     @default(5)
+  paymentTerms    String?
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  materials      Material[]
+  supplierOrders SupplierOrder[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+// ─── PRODOTTI & MATERIALI ───────────────────────────────
+
+model Product {
+  id             String   @id @default(uuid())
+  organizationId String
+  code           String
+  name           String
+  category       String
+  type           String   // stampa|ricamo|dtf|adesivi|abbigliamento|accessori
+  description    String?
+  unit           String   @default("pz")
+  basePrice      Decimal  @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  variants     ProductVariant[]
+  quoteItems   QuoteItem[]
+  orderItems   OrderItem[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+model ProductVariant {
+  id            String   @id @default(uuid())
+  productId     String
+  sku           String
+  size          String?
+  color         String?
+  material      String?
+  extraAttrs    Json?
+  priceOverride Decimal?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  product        Product         @relation(fields: [productId], references: [id])
+  inventoryItems InventoryItem[]
+
+  @@index([productId])
+}
+
+model Material {
+  id             String   @id @default(uuid())
+  organizationId String
+  code           String
+  name           String
+  category       String   // film_dtf|vinile|tessuto|inchiostro|filo|packaging|altro
+  unit           String   // pz|m|m2|kg|L|bobine|fogli
+  supplierId     String?
+  costPerUnit    Decimal  @default(0)
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  inventoryItems InventoryItem[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+// ─── MAGAZZINO ──────────────────────────────────────────
+
+model Warehouse {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  location       String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  locations      WarehouseLocation[]
+  items          InventoryItem[]
+
+  @@index([organizationId])
+}
+
+model WarehouseLocation {
+  id          String @id @default(uuid())
+  warehouseId String
+  zone        String
+  shelf       String?
+  slot        String?
+  label       String
+
+  warehouse Warehouse       @relation(fields: [warehouseId], references: [id])
+  items     InventoryItem[]
+}
+
+model InventoryItem {
+  id              String   @id @default(uuid())
+  organizationId  String
+  materialId      String?
+  variantId       String?
+  warehouseId     String
+  locationId      String?
+  qtyAvailable    Decimal  @default(0)
+  qtyReserved     Decimal  @default(0)
+  qtyMinThreshold Decimal  @default(0)
+  qtyReorderPoint Decimal  @default(0)
+  lastCountedAt   DateTime?
+  updatedAt       DateTime @updatedAt
+
+  material   Material?          @relation(fields: [materialId], references: [id])
+  variant    ProductVariant?    @relation(fields: [variantId], references: [id])
+  warehouse  Warehouse          @relation(fields: [warehouseId], references: [id])
+  location   WarehouseLocation? @relation(fields: [locationId], references: [id])
+  movements  InventoryMovement[]
+
+  @@index([organizationId])
+}
+
+model InventoryMovement {
+  id              String       @id @default(uuid())
+  organizationId  String
+  inventoryItemId String
+  type            MovementType
+  qty             Decimal
+  referenceType   String?
+  referenceId     String?
+  notes           String?
+  createdBy       String
+  createdAt       DateTime     @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([organizationId])
+  @@index([inventoryItemId])
+}
+
+enum MovementType {
+  carico
+  scarico
+  trasferimento
+  rettifica
+  impegno
+  rilascio
+}
+
+// ─── PREVENTIVI & ORDINI ────────────────────────────────
+
+model Quote {
+  id             String      @id @default(uuid())
+  organizationId String
+  code           String
+  customerId     String
+  assignedTo     String?
+  status         QuoteStatus @default(bozza)
+  isUrgent       Boolean     @default(false)
+  validUntil     DateTime?
+  totalAmount    Decimal     @default(0)
+  discountPct    Decimal     @default(0)
+  vatPct         Decimal     @default(22)
+  notes          String?
+  internalNotes  String?
+  sentAt         DateTime?
+  acceptedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  customer     Customer     @relation(fields: [customerId], references: [id])
+  items        QuoteItem[]
+  orders       Order[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+enum QuoteStatus {
+  bozza
+  inviato
+  in_attesa
+  accettato
+  rifiutato
+  scaduto
+}
+
+model QuoteItem {
+  id          String  @id @default(uuid())
+  quoteId     String
+  productId   String?
+  variantId   String?
+  description String
+  qty         Decimal
+  unitPrice   Decimal
+  discountPct Decimal @default(0)
+  technique   String?
+  artworkUrl  String?
+  notes       String?
+  total       Decimal
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([quoteId])
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  organizationId String
+  code           String
+  customerId     String
+  quoteId        String?
+  source         String      @default("manual")
+  sourceId       String?
+  status         OrderStatus @default(nuovo)
+  isUrgent       Boolean     @default(false)
+  priority       Int         @default(3)
+  dueDate        DateTime?
+  totalAmount    Decimal     @default(0)
+  depositAmount  Decimal     @default(0)
+  vatPct         Decimal     @default(22)
+  notes          String?
+  internalNotes  String?
+  artworkUrl     String?
+  createdBy      String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  quote          Quote?          @relation(fields: [quoteId], references: [id])
+  items          OrderItem[]
+  productionJobs ProductionJob[]
+  shipments      Shipment[]
+  activities     OrderActivity[]
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+enum OrderStatus {
+  nuovo
+  confermato
+  in_produzione
+  completato
+  spedito
+  consegnato
+  annullato
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productId   String?
+  variantId   String?
+  description String
+  qty         Decimal
+  unitPrice   Decimal
+  discountPct Decimal @default(0)
+  technique   String?
+  artworkUrl  String?
+  notes       String?
+  total       Decimal
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+}
+
+model SupplierOrder {
+  id             String @id @default(uuid())
+  organizationId String
+  code           String
+  supplierId     String
+  status         String @default("bozza")
+  expectedAt     DateTime?
+  receivedAt     DateTime?
+  totalAmount    Decimal  @default(0)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    SupplierOrderItem[]
+
+  @@index([organizationId])
+}
+
+model SupplierOrderItem {
+  id               String  @id @default(uuid())
+  supplierOrderId  String
+  materialId       String?
+  variantId        String?
+  description      String
+  qtyOrdered       Decimal
+  qtyReceived      Decimal @default(0)
+  unitPrice        Decimal
+  notes            String?
+
+  supplierOrder SupplierOrder @relation(fields: [supplierOrderId], references: [id], onDelete: Cascade)
+
+  @@index([supplierOrderId])
+}
+
+// ─── PRODUZIONE ─────────────────────────────────────────
+
+model ProductionJob {
+  id             String     @id @default(uuid())
+  organizationId String
+  orderId        String
+  status         ProdStatus @default(da_iniziare)
+  isUrgent       Boolean    @default(false)
+  priority       Int        @default(3)
+  assignedTo     String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  order        Order           @relation(fields: [orderId], references: [id])
+  steps        ProductionStep[]
+
+  @@index([organizationId])
+}
+
+enum ProdStatus {
+  da_iniziare
+  in_corso
+  bloccato
+  completato
+  annullato
+}
+
+model ProductionStep {
+  id              String   @id @default(uuid())
+  productionJobId String
+  stepType        String   // taglio|cucitura|stampa|ricamo|dtf|confezionamento|controllo
+  status          String   @default("attesa")
+  machineId       String?
+  assignedTo      String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  notes           String?
+  orderIndex      Int      @default(0)
+
+  productionJob ProductionJob @relation(fields: [productionJobId], references: [id], onDelete: Cascade)
+  machine       Machine?      @relation(fields: [machineId], references: [id])
+
+  @@index([productionJobId])
+}
+
+// ─── DTF ────────────────────────────────────────────────
+
+model DtfOrder {
+  id             String   @id @default(uuid())
+  organizationId String
+  code           String
+  customerId     String?
+  orderId        String?
+  description    String
+  filmWidth      String   // 30cm|60cm|A3|A4
+  meters         Decimal
+  colors         String?
+  status         String   @default("bozza")
+  machineId      String?
+  filmConsumed   Decimal  @default(0)
+  inkConsumed    Json?
+  notes          String?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+// ─── ADESIVI ────────────────────────────────────────────
+
+model StickerOrder {
+  id             String   @id @default(uuid())
+  organizationId String
+  code           String
+  customerId     String?
+  orderId        String?
+  description    String
+  width          Decimal
+  height         Decimal
+  unit           String   @default("cm")
+  quantity       Int
+  material       String
+  finishing      String?
+  cutting        String?
+  status         String   @default("bozza")
+  materialUsed   Decimal  @default(0)
+  notes          String?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+// ─── CAMPIONATURE ───────────────────────────────────────
+
+model Sample {
+  id             String   @id @default(uuid())
+  organizationId String
+  code           String
+  customerId     String?
+  description    String
+  technique      String?
+  status         String   @default("in_lavorazione")
+  cost           Decimal  @default(0)
+  approvedAt     DateTime?
+  linkedOrderId  String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  customer     Customer?    @relation(fields: [customerId], references: [id])
+
+  @@unique([code, organizationId])
+  @@index([organizationId])
+}
+
+// ─── SPEDIZIONI & ETICHETTE ─────────────────────────────
+
+model Shipment {
+  id                String         @id @default(uuid())
+  organizationId    String
+  orderId           String
+  customerId        String
+  carrierId         String?
+  recipientName     String
+  recipientCompany  String?
+  address           String
+  city              String
+  zip               String
+  province          String?
+  country           String         @default("IT")
+  phone             String?
+  email             String?
+  status            ShipmentStatus @default(da_preparare)
+  trackingNumber    String?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  cost              Decimal?
+  notes             String?
+  createdBy         String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  order        Order             @relation(fields: [orderId], references: [id])
+  customer     Customer          @relation(fields: [customerId], references: [id])
+  packages     ShipmentPackage[]
+  labels       ShippingLabel[]
+
+  @@index([organizationId])
+}
+
+enum ShipmentStatus {
+  da_preparare
+  pronta
+  spedita
+  in_transito
+  consegnata
+  problema
+}
+
+model ShipmentPackage {
+  id           String  @id @default(uuid())
+  shipmentId   String
+  weightKg     Decimal?
+  lengthCm     Decimal?
+  widthCm      Decimal?
+  heightCm     Decimal?
+  contentNotes String?
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+}
+
+model ShippingLabel {
+  id             String      @id @default(uuid())
+  shipmentId     String
+  organizationId String
+  labelType      String      @default("interna")
+  status         LabelStatus @default(bozza)
+  fileUrl        String?
+  trackingNumber String?
+  generatedAt    DateTime?
+  printedAt      DateTime?
+  voidedAt       DateTime?
+  errorMessage   String?
+  createdAt      DateTime    @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id])
+}
+
+enum LabelStatus {
+  bozza
+  generata
+  stampata
+  annullata
+  errore
+}
+
+// ─── DIPENDENTI & PRESENZE ──────────────────────────────
+
+model Employee {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  role           String
+  department     String?
+  hourlyRate     Decimal  @default(0)
+  monthlyHours   Int      @default(168)
+  contractType   String   @default("dipendente")
+  startDate      DateTime?
+  endDate        DateTime?
+  isActive       Boolean  @default(true)
+  qrCode         String?  @unique
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  attendance   Attendance[]
+
+  @@index([organizationId])
+}
+
+model Attendance {
+  id          String   @id @default(uuid())
+  employeeId  String
+  date        DateTime @db.Date
+  checkIn     DateTime?
+  checkOut    DateTime?
+  hoursWorked Decimal  @default(0)
+  overtime    Decimal  @default(0)
+  type        String   @default("lavoro") // lavoro|ferie|malattia|permesso
+  notes       String?
+  latitude    Decimal?
+  longitude   Decimal?
+  createdAt   DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+}
+
+// ─── MACCHINE & MANUTENZIONE ────────────────────────────
+
+model Machine {
+  id                String        @id @default(uuid())
+  organizationId    String
+  name              String
+  type              String        // dtf|dtg|ricamo|pressa|plotter|taglio|altro
+  status            MachineStatus @default(operativa)
+  location          String?
+  serialNumber      String?
+  purchaseDate      DateTime?
+  lastMaintenanceAt DateTime?
+  nextMaintenanceAt DateTime?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  productionSteps ProductionStep[]
+  serviceRequests ServiceRequest[]
+  maintenanceLogs MaintenanceLog[]
+  inkUsage        InkUsage[]
+
+  @@index([organizationId])
+}
+
+enum MachineStatus {
+  operativa
+  guasta
+  manutenzione
+  dismessa
+}
+
+model ServiceRequest {
+  id             String   @id @default(uuid())
+  organizationId String
+  machineId      String?
+  title          String
+  description    String?
+  priority       String   @default("media")
+  status         String   @default("aperta")
+  requestedBy    String
+  assignedTo     String?
+  requestedAt    DateTime @default(now())
+  scheduledAt    DateTime?
+  completedAt    DateTime?
+  cost           Decimal?
+  notes          String?
+
+  machine  Machine?         @relation(fields: [machineId], references: [id])
+  logs     MaintenanceLog[]
+}
+
+model MaintenanceLog {
+  id               String   @id @default(uuid())
+  organizationId   String
+  machineId        String
+  serviceRequestId String?
+  type             String
+  description      String
+  performedBy      String
+  performedAt      DateTime
+  nextDueAt        DateTime?
+  cost             Decimal?
+  notes            String?
+
+  machine        Machine         @relation(fields: [machineId], references: [id])
+  serviceRequest ServiceRequest? @relation(fields: [serviceRequestId], references: [id])
+}
+
+// ─── INCHIOSTRI & CONSUMI ───────────────────────────────
+
+model InkUsage {
+  id             String   @id @default(uuid())
+  organizationId String
+  machineId      String
+  date           DateTime @db.Date
+  colorBlack     Decimal  @default(0)
+  colorCyan      Decimal  @default(0)
+  colorMagenta   Decimal  @default(0)
+  colorYellow    Decimal  @default(0)
+  colorWhite     Decimal  @default(0)
+  metersProduced Decimal  @default(0)
+  referenceId    String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  machine Machine @relation(fields: [machineId], references: [id])
+
+  @@index([machineId])
+  @@index([organizationId])
+}
+
+// ─── FINANZA INTERNA ────────────────────────────────────
+
+model FinancialEntry {
+  id             String          @id @default(uuid())
+  organizationId String
+  type           FinancialType
+  category       String          // stipendi|fornitori|tasse|finanziamento|affitto|utenze|altro
+  description    String
+  amount         Decimal
+  referenceType  String?
+  referenceId    String?
+  date           DateTime        @db.Date
+  isAllocated    Boolean         @default(false)
+  notes          String?
+  createdBy      String
+  createdAt      DateTime        @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+enum FinancialType {
+  entrata
+  uscita
+  accantonamento
+}
+
+// ─── TASK & AI LOG ──────────────────────────────────────
+
+model AiLog {
+  id                   String   @id @default(uuid())
+  organizationId       String
+  userId               String
+  sessionId            String
+  userMessage          String
+  intentDetected       String?
+  functionCalled       String?
+  functionParams       Json?
+  functionResult       Json?
+  aiResponse           String?
+  requiredConfirmation Boolean  @default(false)
+  confirmedBy          String?
+  createdAt            DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model BusinessRule {
+  id             String   @id @default(uuid())
+  organizationId String
+  module         String
+  ruleKey        String
+  ruleValue      String
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, module, ruleKey])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  action         String
+  entityType     String
+  entityId       String
+  oldValues      Json?
+  newValues      Json?
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
+
+// ─── TEAM COLLABORATION ─────────────────────────────────
+
+// Canali di comunicazione (es. #produzione, #grafico, #generale)
+model Channel {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String            // generale|produzione|grafico|magazzino|vendite
+  description    String?
+  type           ChannelType       @default(PUBLIC)
+  isDefault      Boolean  @default(false)
+  createdBy      String
+  createdAt      DateTime @default(now())
+
+  messages  TeamMessage[]
+  members   ChannelMember[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+enum ChannelType {
+  PUBLIC   // visibile a tutti
+  PRIVATE  // solo invitati
+  DIRECT   // messaggio diretto tra 2 persone
+}
+
+model ChannelMember {
+  id        String   @id @default(uuid())
+  channelId String
+  userId    String
+  joinedAt  DateTime @default(now())
+  lastRead  DateTime?
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+}
+
+// Messaggi nei canali team
+model TeamMessage {
+  id             String   @id @default(uuid())
+  organizationId String
+  channelId      String
+  userId         String
+  userName       String
+  userAvatar     String?
+  content        String
+  type           MessageType @default(TEXT)
+  attachmentUrl  String?
+  attachmentName String?
+  // Riferimento opzionale a entità (ordine, preventivo, task...)
+  refType        String?   // order|quote|task|production|dtf
+  refId          String?
+  refLabel       String?   // es. "ORD-031"
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  channel   Channel          @relation(fields: [channelId], references: [id])
+  reactions MessageReaction[]
+
+  @@index([channelId])
+  @@index([organizationId])
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  IMAGE
+  SYSTEM   // messaggi automatici (es. "Marco ha aggiornato ORD-031")
+  MENTION
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message TeamMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+}
+
+// Timeline collaborativa per ogni ordine
+model OrderActivity {
+  id             String       @id @default(uuid())
+  organizationId String
+  orderId        String
+  userId         String
+  userName       String
+  userAvatar     String?
+  type           ActivityType
+  content        String        // descrizione attività
+  oldValue       String?       // valore precedente (es. stato)
+  newValue       String?       // nuovo valore
+  attachmentUrl  String?
+  createdAt      DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([organizationId])
+}
+
+enum ActivityType {
+  STATUS_CHANGE     // cambio stato ordine
+  COMMENT           // commento manuale
+  FILE_UPLOAD       // caricamento file
+  TASK_ASSIGNED     // task assegnato
+  TASK_COMPLETED    // task completato
+  PRODUCTION_UPDATE // aggiornamento produzione
+  SHIPMENT_UPDATE   // aggiornamento spedizione
+  INVOICE_SENT      // fattura inviata
+  NOTE              // nota interna
+  MENTION           // menzione collega
+}
+
+// Task interni assegnati a persone su oggetti specifici
+model Task {
+  id             String     @id @default(uuid())
+  organizationId String
+  title          String
+  description    String?
+  type           String     @default("interno")
+  priority       TaskPriority @default(MEDIA)
+  status         TaskStatus   @default(APERTO)
+  assignedTo     String?    // userId
+  assignedName   String?
+  createdBy      String
+  createdByName  String
+  dueDate        DateTime?
+  completedAt    DateTime?
+  // Collegamento a entità
+  refType        String?    // order|quote|production|machine|customer
+  refId          String?
+  refLabel       String?
+  channelId      String?    // opzionale: notifica nel canale
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization  Organization   @relation(fields: [organizationId], references: [id])
+  comments      TaskComment[]
+  notifications Notification[]
+
+  @@index([organizationId])
+  @@index([assignedTo])
+}
+
+enum TaskPriority {
+  BASSA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum TaskStatus {
+  APERTO
+  IN_CORSO
+  IN_REVISIONE
+  COMPLETATO
+  ANNULLATO
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  userName  String
+  content   String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+// Notifiche per ogni utente
+model Notification {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String   // destinatario
+  type           String   // task_assigned|order_update|mention|system
+  title          String
+  body           String?
+  refType        String?
+  refId          String?
+  taskId         String?
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  task Task? @relation(fields: [taskId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([organizationId])
+}
+
+// Presenza online in tempo reale
+model UserPresence {
+  userId         String   @id
+  organizationId String
+  status         String   @default("online") // online|away|busy|offline
+  lastSeen       DateTime @default(now())
+  currentPage    String?  // es. "/ordini/ORD-031"
+
+  @@index([organizationId])
+}
