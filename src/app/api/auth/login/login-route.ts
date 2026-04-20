@@ -1,7 +1,8 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { comparePassword, signJWT, setAuthCookie } from '@/lib/auth'
-import { ok, fail } from '@/lib/api'
+import { comparePassword, signJWT } from '@/lib/auth'
+import { fail } from '@/lib/api'
+import { COOKIE_NAME } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,12 +23,24 @@ export async function POST(req: NextRequest) {
     await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } })
 
     const token = signJWT({ userId: user.id, orgId: org.id, role: user.role, email: user.email })
-    setAuthCookie(token)
 
-    return ok({
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
-      org: { id: org.id, name: org.name, slug: org.slug, plan: org.plan, accentColor: org.accentColor },
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        org: { id: org.id, name: org.name, slug: org.slug, plan: org.plan, accentColor: org.accentColor },
+      }
     })
+
+    response.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    })
+
+    return response
   } catch (e) {
     console.error(e)
     return fail('Errore del server', 500)
