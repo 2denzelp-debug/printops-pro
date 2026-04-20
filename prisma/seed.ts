@@ -6,7 +6,6 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Seeding PrintOps database...')
 
-  // ─── Organizzazione demo ───────────────────────────────
   const org = await prisma.organization.upsert({
     where: { slug: 'printshop-demo' },
     update: {},
@@ -27,7 +26,6 @@ async function main() {
   })
   console.log('✅ Organization:', org.name)
 
-  // ─── Utenti team ──────────────────────────────────────
   const pw = await bcrypt.hash('password123', 12)
 
   const users = await Promise.all([
@@ -61,14 +59,13 @@ async function main() {
 
   const [admin, giulia, marco, sara, andrea] = users
 
-  // ─── Canali team (creati automaticamente) ─────────────
   const defaultChannels = [
-    { name: 'generale',   description: 'Comunicazioni generali per tutto il team', isDefault: true },
+    { name: 'generale', description: 'Comunicazioni generali per tutto il team', isDefault: true },
     { name: 'produzione', description: 'Aggiornamenti e coordinamento produzione' },
-    { name: 'grafico',    description: 'Artwork, proof e approvazioni grafiche' },
-    { name: 'magazzino',  description: 'Stock, rifornimenti e movimenti' },
-    { name: 'vendite',    description: 'Preventivi, ordini e clienti' },
-    { name: 'urgenti',    description: '🚨 Solo comunicazioni urgenti' },
+    { name: 'grafico', description: 'Artwork, proof e approvazioni grafiche' },
+    { name: 'magazzino', description: 'Stock, rifornimenti e movimenti' },
+    { name: 'vendite', description: 'Preventivi, ordini e clienti' },
+    { name: 'urgenti', description: '🚨 Solo comunicazioni urgenti' },
   ]
 
   const createdChannels: Record<string, string> = {}
@@ -87,8 +84,6 @@ async function main() {
         },
       })
       createdChannels[ch.name] = channel.id
-
-      // Messaggio di benvenuto
       await prisma.teamMessage.create({
         data: {
           organizationId: org.id,
@@ -105,33 +100,6 @@ async function main() {
   }
   console.log('✅ Channels:', Object.keys(createdChannels).length)
 
-  // ─── Messaggi demo nel canale generale ────────────────
-  if (createdChannels['generale']) {
-    const demoMsgs = [
-      { user: admin,  content: 'Buongiorno a tutti! Oggi abbiamo 2 ordini urgenti da finire 🎯' },
-      { user: giulia, content: 'Ho finito la stampa di ORD-031. Polo nere pronte per confezionamento', refType: 'order', refLabel: 'ORD-031' },
-      { user: marco,  content: '@sara il file per le jersey di Bianchi Sport ha un problema di risoluzione, riesci a controllare?' },
-      { user: sara,   content: 'Controllato! Il logo era in 72dpi, ho già rifatto a 300dpi e caricato la versione corretta' },
-      { user: andrea, content: 'Attenzione: Polo nera L è esaurita. Ho già inoltrato l\'ordine al fornitore, arriva giovedì' },
-    ]
-
-    for (const msg of demoMsgs) {
-      await prisma.teamMessage.create({
-        data: {
-          organizationId: org.id,
-          channelId: createdChannels['generale'],
-          userId: msg.user.id,
-          userName: msg.user.name,
-          content: msg.content,
-          type: 'TEXT',
-          refType: (msg as { refType?: string }).refType,
-          refLabel: (msg as { refLabel?: string }).refLabel,
-        },
-      })
-    }
-  }
-
-  // ─── Clienti ──────────────────────────────────────────
   const customers = await Promise.all([
     prisma.customer.upsert({
       where: { code_organizationId: { code: 'CLI-001', organizationId: org.id } },
@@ -151,24 +119,28 @@ async function main() {
   ])
   console.log('✅ Customers:', customers.length)
 
-  // ─── Magazzino ────────────────────────────────────────
   const warehouse = await prisma.warehouse.findFirst({ where: { organizationId: org.id } })
     ?? await prisma.warehouse.create({ data: { organizationId: org.id, name: 'Magazzino principale', location: 'Lab A' } })
 
-  const loc = await prisma.warehouseLocation.create({
+  const existingLoc = await prisma.warehouseLocation.findFirst({ where: { warehouseId: warehouse.id } })
+  const loc = existingLoc ?? await prisma.warehouseLocation.create({
     data: { warehouseId: warehouse.id, zone: 'Scaffale A', shelf: 'Ripiano 2', label: 'A-2' },
   })
 
-  const mat = await prisma.material.create({
-    data: { organizationId: org.id, code: 'MAT-001', name: 'T-shirt bianca M', category: 'tessuto', unit: 'pz', costPerUnit: 3.5 },
+  const mat = await prisma.material.upsert({
+    where: { code_organizationId: { code: 'MAT-001', organizationId: org.id } },
+    update: {},
+    create: { organizationId: org.id, code: 'MAT-001', name: 'T-shirt bianca M', category: 'tessuto', unit: 'pz', costPerUnit: 3.5 },
   })
 
-  await prisma.inventoryItem.create({
-    data: { organizationId: org.id, materialId: mat.id, warehouseId: warehouse.id, locationId: loc.id, qtyAvailable: 62, qtyMinThreshold: 30 },
-  })
+  const existingItem = await prisma.inventoryItem.findFirst({ where: { organizationId: org.id, materialId: mat.id } })
+  if (!existingItem) {
+    await prisma.inventoryItem.create({
+      data: { organizationId: org.id, materialId: mat.id, warehouseId: warehouse.id, locationId: loc.id, qtyAvailable: 62, qtyMinThreshold: 30 },
+    })
+  }
   console.log('✅ Warehouse seeded')
 
-  // ─── Ordine demo con timeline ──────────────────────────
   const order = await prisma.order.upsert({
     where: { code_organizationId: { code: 'ORD-031', organizationId: org.id } },
     update: {},
@@ -187,85 +159,33 @@ async function main() {
     },
   })
 
-  // Timeline ordine demo
-  const timelineEvents = [
-    { user: admin,  type: 'STATUS_CHANGE', content: '📦 Ordine ORD-031 creato e confermato', oldValue: null, newValue: 'confermato' },
-    { user: andrea, type: 'NOTE',          content: 'Ho verificato lo stock. Polo nere S e M disponibili, L in arrivo giovedì' },
-    { user: sara,   type: 'FILE_UPLOAD',   content: '🎨 Artwork caricato: logo_rossi_fronte_v2.ai (4.2 MB) — 300dpi pronto per stampa' },
-    { user: giulia, type: 'PRODUCTION_UPDATE', content: '🖨️ Avviata stampa serigrafia fronte — 40/50 pezzi completati' },
-    { user: marco,  type: 'COMMENT',       content: 'Il bianco dell\'inchiostro è perfetto. Procederei anche con il retro senza attendere approvazione' },
-    { user: giulia, type: 'PRODUCTION_UPDATE', content: '✅ Stampa completata — 50/50 pezzi. Passato al confezionamento' },
-  ]
-
-  for (const ev of timelineEvents) {
-    await prisma.orderActivity.create({
-      data: {
-        organizationId: org.id,
-        orderId: order.id,
-        userId: ev.user.id,
-        userName: ev.user.name,
-        type: ev.type as never,
-        content: ev.content,
-        oldValue: (ev as { oldValue?: string | null }).oldValue ?? null,
-        newValue: (ev as { newValue?: string }).newValue,
-      },
-    })
+  const existingActivities = await prisma.orderActivity.count({ where: { orderId: order.id } })
+  if (existingActivities === 0) {
+    const timelineEvents = [
+      { user: admin, type: 'STATUS_CHANGE', content: '📦 Ordine ORD-031 creato e confermato', oldValue: null, newValue: 'confermato' },
+      { user: andrea, type: 'NOTE', content: 'Ho verificato lo stock. Polo nere S e M disponibili, L in arrivo giovedì' },
+      { user: sara, type: 'FILE_UPLOAD', content: '🎨 Artwork caricato: logo_rossi_fronte_v2.ai (4.2 MB) — 300dpi pronto per stampa' },
+      { user: giulia, type: 'PRODUCTION_UPDATE', content: '🖨️ Avviata stampa serigrafia fronte — 40/50 pezzi completati' },
+      { user: marco, type: 'COMMENT', content: 'Il bianco dell\'inchiostro è perfetto. Procederei anche con il retro senza attendere approvazione' },
+      { user: giulia, type: 'PRODUCTION_UPDATE', content: '✅ Stampa completata — 50/50 pezzi. Passato al confezionamento' },
+    ]
+    for (const ev of timelineEvents) {
+      await prisma.orderActivity.create({
+        data: {
+          organizationId: org.id,
+          orderId: order.id,
+          userId: ev.user.id,
+          userName: ev.user.name,
+          type: ev.type as never,
+          content: ev.content,
+          oldValue: (ev as { oldValue?: string | null }).oldValue ?? null,
+          newValue: (ev as { newValue?: string }).newValue,
+        },
+      })
+    }
   }
   console.log('✅ Order + timeline seeded')
 
-  // ─── Task demo ────────────────────────────────────────
-  await prisma.task.create({
-    data: {
-      organizationId: org.id,
-      title: 'Verificare artwork ORD-031 prima della stampa',
-      description: 'Controllare risoluzione minima 300dpi e colori CMYK',
-      type: 'grafico',
-      priority: 'ALTA',
-      status: 'COMPLETATO',
-      assignedTo: sara.id,
-      assignedName: sara.name,
-      createdBy: admin.id,
-      createdByName: admin.name,
-      completedAt: new Date(),
-      refType: 'order',
-      refId: order.id,
-      refLabel: 'ORD-031',
-    },
-  })
-
-  await prisma.task.create({
-    data: {
-      organizationId: org.id,
-      title: 'Ordinare Polo nera L — stock esaurito',
-      description: 'Minimo 50 pz per evitare blocchi produzione. Fornitore: Tessuti Italia',
-      type: 'magazzino',
-      priority: 'CRITICA',
-      status: 'IN_CORSO',
-      assignedTo: andrea.id,
-      assignedName: andrea.name,
-      createdBy: admin.id,
-      createdByName: admin.name,
-      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    },
-  })
-
-  await prisma.task.create({
-    data: {
-      organizationId: org.id,
-      title: 'Preparare preventivo per Sport Club Milano — 80 jersey',
-      type: 'vendite',
-      priority: 'MEDIA',
-      status: 'APERTO',
-      assignedTo: admin.id,
-      assignedName: admin.name,
-      createdBy: admin.id,
-      createdByName: admin.name,
-      dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-    },
-  })
-  console.log('✅ Tasks seeded')
-
-  // ─── Dipendenti ───────────────────────────────────────
   await prisma.employee.createMany({
     data: [
       { organizationId: org.id, name: 'Giulia Mancini', email: 'giulia@printshop.it', role: 'Operatrice stampa', department: 'Produzione', hourlyRate: 16, monthlyHours: 168 },
@@ -277,7 +197,6 @@ async function main() {
   })
   console.log('✅ Employees seeded')
 
-  // ─── Macchine ─────────────────────────────────────────
   await prisma.machine.createMany({
     data: [
       { organizationId: org.id, name: 'Stampante DTF Pro X8', type: 'dtf', status: 'operativa', location: 'Lab A', serialNumber: 'DTF-0023' },
