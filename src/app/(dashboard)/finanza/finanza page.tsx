@@ -28,7 +28,12 @@ export default function FinanzaPage() {
   return (
     <div>
       <div style={{ display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:8,marginBottom:14 }}>
-        {[['Entrate aprile','€'+entrate.toLocaleString('it'),'var(--green-text)'],['Uscite aprile','€'+uscite.toLocaleString('it'),'var(--red-text)'],['Margine','€'+margine.toLocaleString('it'),'#8b5cf6'],['% Margine',Math.round(margine/entrate*100)+'%',margine>0?'var(--green-text)':'var(--red-text)']].map(([l,v,c]) => (
+        {[
+          ['Entrate aprile','€'+entrate.toLocaleString('it'),'var(--green-text)'],
+          ['Uscite aprile','€'+uscite.toLocaleString('it'),'var(--red-text)'],
+          ['Margine','€'+margine.toLocaleString('it'),'#8b5cf6'],
+          ['% Margine',Math.round(margine/entrate*100)+'%',margine>0?'var(--green-text)':'var(--red-text)']
+        ].map(([l,v,c]) => (
           <div key={l as string} style={{ background:'var(--card)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'10px 12px' }}>
             <div style={{ fontSize:10,color:'var(--ink3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:4 }}>{l as string}</div>
             <div style={{ fontSize:22,fontWeight:600,fontFamily:'DM Mono,monospace',color:c as string }}>{v as string}</div>
