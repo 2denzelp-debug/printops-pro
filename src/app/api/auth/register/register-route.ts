@@ -14,24 +14,11 @@ export async function POST(req: NextRequest) {
     const pw = await hashPassword(password)
 
     const org = await prisma.organization.create({
-      data: {
-        name: orgName,
-        slug,
-        plan: 'TRIAL',
-        planStatus: 'TRIAL',
-        maxUsers: 3,
-        email,
-      },
+      data: { name: orgName, slug, plan: 'TRIAL', planStatus: 'TRIAL', maxUsers: 3, email },
     })
 
     const user = await prisma.user.create({
-      data: {
-        organizationId: org.id,
-        email,
-        passwordHash: pw,
-        name: name || orgName,
-        role: 'OWNER',
-      },
+      data: { organizationId: org.id, email, passwordHash: pw, name: name || orgName, role: 'OWNER' },
     })
 
     const token = signJWT({ userId: user.id, orgId: org.id, role: user.role, email: user.email })
@@ -46,8 +33,8 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
