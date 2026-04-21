@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { comparePassword, signJWT } from '@/lib/auth'
+import { comparePassword, signJWT, COOKIE_NAME } from '@/lib/auth'
 import { fail } from '@/lib/api'
-import { COOKIE_NAME } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,8 +33,8 @@ export async function POST(req: NextRequest) {
 
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     })
