@@ -1,15 +1,12 @@
 'use client'
-
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-
 export default function RegisterPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ orgName: '', name: '', email: '', password: '' })
+  const [form, setForm] = useState({ orgName: '', slug: '', name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
@@ -29,14 +26,12 @@ export default function RegisterPage() {
       setLoading(false)
     }
   }
-
   const inp: React.CSSProperties = {
     width: '100%', border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: 8, padding: '10px 12px', fontSize: 13,
     background: 'rgba(255,255,255,0.06)', color: '#fff', outline: 'none',
     fontFamily: 'DM Sans, sans-serif',
   }
-
   return (
     <div style={{ width: '100%', maxWidth: 420 }}>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
@@ -47,18 +42,16 @@ export default function RegisterPage() {
           14 giorni gratuiti · Nessuna carta richiesta
         </div>
       </div>
-
       <form onSubmit={handleSubmit} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 28 }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 20 }}>Crea il tuo account</div>
-
         {error && (
           <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '8px 12px', borderRadius: 8, fontSize: 12, marginBottom: 14 }}>
             {error}
           </div>
         )}
-
         {[
           { key: 'orgName', label: 'Nome azienda', placeholder: 'PrintShop srl', type: 'text' },
+          { key: 'slug', label: 'ID azienda (slug)', placeholder: 'printshop (solo lettere e trattini)', type: 'text' },
           { key: 'name', label: 'Il tuo nome', placeholder: 'Mario Rossi', type: 'text' },
           { key: 'email', label: 'Email', placeholder: 'mario@azienda.it', type: 'email' },
           { key: 'password', label: 'Password', placeholder: 'Minimo 8 caratteri', type: 'password' },
@@ -75,7 +68,6 @@ export default function RegisterPage() {
             />
           </div>
         ))}
-
         <button
           type="submit"
           disabled={loading}
@@ -87,7 +79,6 @@ export default function RegisterPage() {
         >
           {loading ? 'Creazione account...' : 'Inizia gratis →'}
         </button>
-
         <div style={{ textAlign: 'center', marginTop: 14, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
           Hai già un account?{' '}
           <Link href="/login" style={{ color: '#22c55e', textDecoration: 'none' }}>Accedi</Link>
