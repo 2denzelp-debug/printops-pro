@@ -159,13 +159,18 @@ async function main() {
     data: { warehouseId: warehouse.id, zone: 'Scaffale A', shelf: 'Ripiano 2', label: 'A-2' },
   })
 
-  const mat = await prisma.material.create({
-    data: { organizationId: org.id, code: 'MAT-001', name: 'T-shirt bianca M', category: 'tessuto', unit: 'pz', costPerUnit: 3.5 },
+  const mat = await prisma.material.upsert({
+    where: { code_organizationId: { code: 'MAT-001', organizationId: org.id } },
+    update: {},
+    create: { organizationId: org.id, code: 'MAT-001', name: 'T-shirt bianca M', category: 'tessuto', unit: 'pz', costPerUnit: 3.5 },
   })
 
-  await prisma.inventoryItem.create({
-    data: { organizationId: org.id, materialId: mat.id, warehouseId: warehouse.id, locationId: loc.id, qtyAvailable: 62, qtyMinThreshold: 30 },
-  })
+  const existingItem = await prisma.inventoryItem.findFirst({ where: { organizationId: org.id, materialId: mat.id } })
+  if (!existingItem) {
+    await prisma.inventoryItem.create({
+      data: { organizationId: org.id, materialId: mat.id, warehouseId: warehouse.id, locationId: loc.id, qtyAvailable: 62, qtyMinThreshold: 30 },
+    })
+  }
   console.log('✅ Warehouse seeded')
 
   // ─── Ordine demo con timeline ──────────────────────────

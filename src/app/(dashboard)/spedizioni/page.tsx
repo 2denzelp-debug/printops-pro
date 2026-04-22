@@ -8,9 +8,6 @@ const SHIPS = [
   { id:'SHP-012',ord:'ORD-030',cli:'Anna Conti',corriere:'BRT',track:'—',status:'pronta',data:'—',colli:5,peso:'14.0 kg' },
   { id:'SHP-011',ord:'ORD-029',cli:'Sara Bianchi',corriere:'UPS',track:'1Z9999W9',status:'spedita',data:'12 apr',colli:1,peso:'2.0 kg' },
 ]
-
-type Ship = typeof SHIPS[0]
-
 const SM: Record<string,{bg:string,text:string,label:string}> = {
   da_preparare:{bg:'#f1f0ec',text:'#5f5e5a',label:'Da preparare'},
   pronta:{bg:'#fef3c7',text:'#b45309',label:'Pronta'},
@@ -21,7 +18,7 @@ const SM: Record<string,{bg:string,text:string,label:string}> = {
 }
 
 export default function SpedizioniPage() {
-  const [selected, setSelected] = useState<Ship|null>(null)
+  const [selected, setSelected] = useState<typeof SHIPS[0]|null>(null)
 
   return (
     <div style={{display:'flex',gap:12,height:'calc(100vh - 76px)'}}>
@@ -44,10 +41,10 @@ export default function SpedizioniPage() {
                   <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10}}>{s.ord}</td>
                   <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.cli}</td>
                   <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',textAlign:'center',fontFamily:'DM Mono,monospace'}}>{s.colli}</td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--ink3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.track}</td>
+                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--ink3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.track!=='—'?s.track:'—'}</td>
                   <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)'}}><span style={{display:'inline-flex',padding:'1px 6px',borderRadius:10,fontSize:9,fontWeight:700,background:sm.bg,color:sm.text}}>{sm.label}</span></td>
                   <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)'}}>
-                    <div style={{display:'flex',gap:4}}>
+                    <div style={{display:'flex',gap:4'}}>
                       {s.status==='da_preparare'&&<button style={{padding:'2px 7px',fontSize:9,border:'1px solid var(--border2)',borderRadius:4,cursor:'pointer',background:'#0c0c0a',color:'#fff',fontFamily:'inherit'}}>Etichetta</button>}
                       {s.track!=='—'&&<button style={{padding:'2px 7px',fontSize:9,border:'1px solid var(--border2)',borderRadius:4,cursor:'pointer',background:'transparent',fontFamily:'inherit'}}>Track</button>}
                     </div>
@@ -66,16 +63,10 @@ export default function SpedizioniPage() {
             <button onClick={()=>setSelected(null)} style={{padding:'3px 8px',fontSize:10,border:'1px solid var(--border2)',borderRadius:6,cursor:'pointer',background:'transparent',fontFamily:'inherit'}}>✕</button>
           </div>
           <div style={{padding:14,flex:1,overflowY:'auto'}}>
-            {[
-              ['📦','Corriere',selected.corriere],
-              ['🔍','Tracking',selected.track],
-              ['📅','Data',selected.data],
-              ['📦','Colli',String(selected.colli)],
-              ['⚖️','Peso',selected.peso]
-            ].map(([icon,label,val])=>(
-              <div key={label} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
-                <span style={{fontSize:14}}>{icon}</span>
-                <div><div style={{fontSize:10,color:'var(--ink3)'}}>{label}</div><div style={{fontSize:12,fontWeight:500}}>{val}</div></div>
+            {[['📦','Corriere',selected.corriere],['🔍','Tracking',selected.track],['📅','Data',selected.data],['📦','Colli',String(selected.colli)],['⚖️','Peso',selected.peso]].map(([icon,label,val])=>(
+              <div key={label as string} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+                <span style={{fontSize:14}}>{icon as string}</span>
+                <div><div style={{fontSize:10,color:'var(--ink3)'}}>{label as string}</div><div style={{fontSize:12,fontWeight:500}}>{val as string}</div></div>
               </div>
             ))}
             <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:8}}>
