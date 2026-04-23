@@ -8,6 +8,9 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs']
+  },
+  generateBuildId: async () => {
+    return Date.now().toString()
   }
 }
 
