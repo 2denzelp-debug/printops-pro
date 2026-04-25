@@ -10,9 +10,14 @@ const nextConfig = {
     serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs']
   },
   output: 'standalone',
-  generateBuildId: async () => {
-    return Date.now().toString()
-  }
+  swcMinify: true,
+  images: {
+    unoptimized: true,
+  },
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
 }
 
 module.exports = nextConfig
