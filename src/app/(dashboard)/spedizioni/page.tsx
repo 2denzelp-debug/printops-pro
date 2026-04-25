@@ -8,54 +8,51 @@ const SHIPS = [
   { id:'SHP-012',ord:'ORD-030',cli:'Anna Conti',corriere:'BRT',track:'—',status:'pronta',data:'—',colli:5,peso:'14.0 kg' },
   { id:'SHP-011',ord:'ORD-029',cli:'Sara Bianchi',corriere:'UPS',track:'1Z9999W9',status:'spedita',data:'12 apr',colli:1,peso:'2.0 kg' },
 ]
+
+type Ship = typeof SHIPS[0]
+
 const SM: Record<string,{bg:string,text:string,label:string}> = {
   da_preparare:{bg:'#f1f0ec',text:'#5f5e5a',label:'Da preparare'},
   pronta:{bg:'#fef3c7',text:'#b45309',label:'Pronta'},
   spedita:{bg:'#dbeafe',text:'#1d4ed8',label:'Spedita'},
   in_transito:{bg:'#ede9fe',text:'#6d28d9',label:'In transito'},
   consegnata:{bg:'#dcfce7',text:'#15803d',label:'Consegnata'},
-  problema:{bg:'#fee2e2',text:'#b91c1c',label:'Problema'},
 }
 
 export default function SpedizioniPage() {
-  const [selected, setSelected] = useState<typeof SHIPS[0]|null>(null)
+  const [selected, setSelected] = useState<Ship|null>(null)
 
   return (
     <div style={{display:'flex',gap:12,height:'calc(100vh - 76px)'}}>
       <div style={{flex:selected?'0 0 60%':'1',display:'flex',flexDirection:'column',minWidth:0}}>
         <div style={{display:'flex',gap:8,marginBottom:10,alignItems:'center',justifyContent:'space-between'}}>
           <div style={{fontSize:12,color:'var(--ink3)'}}>{SHIPS.length} spedizioni</div>
-          <button style={{padding:'5px 12px',fontSize:11,fontWeight:600,background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--r)',cursor:'pointer',fontFamily:'inherit'}}>+ Nuova spedizione</button>
+          <button style={{padding:'5px 12px',fontSize:11,fontWeight:600,background:'var(--green)',color:'#fff',border:'none',borderRadius:'var(--r)',cursor:'pointer',fontFamily:'inherit'}}>+ Nuova</button>
         </div>
         <div style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:'var(--rl)',overflow:'hidden',flex:1,overflowY:'auto'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,tableLayout:'fixed'}}>
-            <colgroup><col style={{width:70}}/><col style={{width:80}}/><col/><col style={{width:60}}/><col style={{width:120}}/><col style={{width:80}}/><col style={{width:80}}/></colgroup>
+            <colgroup><col style={{width:70}}/><col style={{width:80}}/><col/><col style={{width:60}}/><col style={{width:120}}/><col style={{width:80}}/></colgroup>
             <thead><tr style={{background:'var(--card2)'}}>
-              {['ID','Ordine','Cliente','Colli','Tracking','Stato','Azioni'].map(h=><th key={h} style={{textAlign:'left',padding:'7px 11px',color:'var(--ink3)',fontWeight:500,borderBottom:'1px solid var(--border)',fontSize:10}}>{h}</th>)}
+              {['ID','Ordine','Cliente','Colli','Tracking','Stato'].map(h=><th key={h} style={{textAlign:'left',padding:'7px 11px',color:'var(--ink3)',fontWeight:500,borderBottom:'1px solid var(--border)',fontSize:10}}>{h}</th>)}
             </tr></thead>
             <tbody>
               {SHIPS.map(s=>{
                 const sm=SM[s.status]||SM.da_preparare
-                return(<tr key={s.id} onClick={()=>setSelected(selected?.id===s.id?null:s)} style={{cursor:'pointer',background:selected?.id===s.id?'#f0fdf4':'transparent'}}>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10,fontWeight:500}}>{s.id}</td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10}}>{s.ord}</td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.cli}</td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',textAlign:'center',fontFamily:'DM Mono,monospace'}}>{s.colli}</td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10,color:'var(--ink3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.track!=='—'?s.track:'—'}</td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)'}}><span style={{display:'inline-flex',padding:'1px 6px',borderRadius:10,fontSize:9,fontWeight:700,background:sm.bg,color:sm.text}}>{sm.label}</span></td>
-                  <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)'}}>
-                    <div style={{display:'flex',gap:4'}}>
-                      {s.status==='da_preparare'&&<button style={{padding:'2px 7px',fontSize:9,border:'1px solid var(--border2)',borderRadius:4,cursor:'pointer',background:'#0c0c0a',color:'#fff',fontFamily:'inherit'}}>Etichetta</button>}
-                      {s.track!=='—'&&<button style={{padding:'2px 7px',fontSize:9,border:'1px solid var(--border2)',borderRadius:4,cursor:'pointer',background:'transparent',fontFamily:'inherit'}}>Track</button>}
-                    </div>
-                  </td>
-                </tr>)
+                return(
+                  <tr key={s.id} onClick={()=>setSelected(selected?.id===s.id?null:s)} style={{cursor:'pointer',background:selected?.id===s.id?'#f0fdf4':'transparent'}}>
+                    <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10,fontWeight:500}}>{s.id}</td>
+                    <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontFamily:'DM Mono,monospace',fontSize:10}}>{s.ord}</td>
+                    <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.cli}</td>
+                    <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',textAlign:'center'}}>{s.colli}</td>
+                    <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)',fontSize:10,color:'var(--ink3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.track}</td>
+                    <td style={{padding:'8px 11px',borderBottom:'1px solid var(--border)'}}><span style={{display:'inline-flex',padding:'1px 6px',borderRadius:10,fontSize:9,fontWeight:700,background:sm.bg,color:sm.text}}>{sm.label}</span></td>
+                  </tr>
+                )
               })}
             </tbody>
           </table>
         </div>
       </div>
-
       {selected && (
         <div style={{flex:'0 0 37%',background:'var(--card)',border:'1px solid var(--border)',borderRadius:'var(--rl)',overflow:'hidden',display:'flex',flexDirection:'column'}}>
           <div style={{padding:'12px 14px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -64,16 +61,11 @@ export default function SpedizioniPage() {
           </div>
           <div style={{padding:14,flex:1,overflowY:'auto'}}>
             {[['📦','Corriere',selected.corriere],['🔍','Tracking',selected.track],['📅','Data',selected.data],['📦','Colli',String(selected.colli)],['⚖️','Peso',selected.peso]].map(([icon,label,val])=>(
-              <div key={label as string} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
-                <span style={{fontSize:14}}>{icon as string}</span>
-                <div><div style={{fontSize:10,color:'var(--ink3)'}}>{label as string}</div><div style={{fontSize:12,fontWeight:500}}>{val as string}</div></div>
+              <div key={label} style={{display:'flex',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+                <span style={{fontSize:14}}>{icon}</span>
+                <div><div style={{fontSize:10,color:'var(--ink3)'}}>{label}</div><div style={{fontSize:12,fontWeight:500}}>{val}</div></div>
               </div>
             ))}
-            <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:8}}>
-              {selected.status==='da_preparare'&&<button style={{padding:'9px',fontSize:12,fontWeight:600,background:'#0c0c0a',color:'#fff',border:'none',borderRadius:'var(--r)',cursor:'pointer',fontFamily:'inherit'}}>🖨️ Genera etichetta PDF</button>}
-              {selected.track!=='—'&&<button style={{padding:'9px',fontSize:12,fontWeight:500,background:'var(--card2)',border:'1px solid var(--border2)',borderRadius:'var(--r)',cursor:'pointer',fontFamily:'inherit'}}>📍 Traccia spedizione</button>}
-              <button style={{padding:'9px',fontSize:12,fontWeight:500,background:'var(--card2)',border:'1px solid var(--border2)',borderRadius:'var(--r)',cursor:'pointer',fontFamily:'inherit'}}>📄 Documenti spedizione</button>
-            </div>
           </div>
         </div>
       )}
